@@ -1,8 +1,3 @@
-#' vectorize
-#'
-#' @name vectorize
-#' @docType package
-
 # 
 # vectorize<-function()
 # {
@@ -19,6 +14,17 @@
 #   }
 # }
 
+#'A more versatile form of the T-SQL \code{COALESCE} function.  
+#'
+#'Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
+#'
+#'@param ... an arbitrary number of vectors
+#'@param fun a two argument function that returns an atomic value
+#'@export
+#'@examples
+#'coalesce(c(NA,1,2))
+#'coalesce(c(NA,1,2),c(3,4,NA))
+
 vectorize<-function(type=0)
 {
   function(fun)
@@ -33,6 +39,17 @@ vectorize<-function(type=0)
     }
   }
 }
+
+#'A more versatile form of the T-SQL \code{COALESCE} function.  
+#'
+#'Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
+#'
+#'@param ... an arbitrary number of vectors
+#'@param fun a two argument function that returns an atomic value
+#'@export
+#'@examples
+#'coalesce(c(NA,1,2))
+#'coalesce(c(NA,1,2),c(3,4,NA))
 
 
 coalesce<-function(...,fun=(function (x,y) if(!is.na(x)) x else y))
