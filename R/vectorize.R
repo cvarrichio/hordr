@@ -14,30 +14,27 @@
 #   }
 # }
 
-#'A more versatile form of the T-SQL \code{COALESCE} function.  
+#'Robust alternative to \code{\link{Vectorize}} function that accepts function with two or more arguments.  
 #'
-#'Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
+#' Returns a function that will work an arbitrary number of data vectors, though output may be unpredicatable in unusual applications The results are also intended to be more intuitive than \code{\link{Vectorize}}. 
 #'
-#'@param ... an arbitrary number of vectors
-#'@param fun a two argument function that returns an atomic value
+#'@param fun a two or more argument function that returns an atomic value
+#'@param type 1 forces a row-wise evaluation, even on atomic vectors
 #'@export
 #'@examples
-#'coalesce(c(NA,1,2))
-#'coalesce(c(NA,1,2),c(3,4,NA))
+#'vectorize(`+`,c(1,2,3))
+#'vectorize(`+`,c(1,2,3),c(1,2,3))
 
-vectorize<-function(type=0)
+vectorize<-function(fun,type=0)
 {
-  function(fun)
+  function(...)
   {
-    function(...)
-    {
-      cols<-cbind(...)
-      if((ncol(cols)>1) | (type==1 & (nrow(cols) > 1)))
-        apply(cols,1,function (x) Reduce(fun,unlist(x)))
-      else
-        Reduce(fun,cols[,1])
-    }
-  }
+    cols<-cbind(...)
+    if((ncol(cols)>1) | (type==1 & (nrow(cols) > 1)))
+      apply(cols,1,function (x) Reduce(fun,unlist(x)))
+    else
+      Reduce(fun,cols[,1])
+  }  
 }
 
 #'A more versatile form of the T-SQL \code{COALESCE} function.  
@@ -59,6 +56,16 @@ coalesce<-function(...,fun=(function (x,y) if(!is.na(x)) x else y))
     vectorize() (FUN)(...)
 }
 
+#'A more versatile form of the T-SQL \code{COALESCE} function.  
+#'
+#'Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
+#'
+#'@param ... an arbitrary number of vectors
+#'@param fun a two argument function that returns an atomic value
+#'@export
+#'@examples
+#'coalesce(c(NA,1,2))
+#'coalesce(c(NA,1,2),c(3,4,NA))
 
 count<-function(...)
 {
