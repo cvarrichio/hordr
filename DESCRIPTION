@@ -1,4 +1,4 @@
-Package: vectorize
+Package: hordr
 Title: Higher order functions for vectorizing and adding capabilities to other functions
 Version: 0.1
 Author: Craig Varrichio <canthony427@gmail.com>
@@ -7,4 +7,3 @@ Depends:
     R (>= 2.15.1)
 License: GPL
 Suggests: functional
-

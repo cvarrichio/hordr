@@ -1,4 +1,11 @@
-# 
+#'Higher order functions and function wrappers to empower and simplify common operations.
+#'
+#'Hordr adds features, generalizes, and fills in gaps in standards R operations to add power and flexibility.  
+#' @docType package
+#' @name hordr
+#' 
+ 
+
 # vectorize<-function()
 # {
 #   function(fun)
