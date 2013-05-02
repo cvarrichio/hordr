@@ -1,36 +1,24 @@
-#'Higher order functions and function wrappers to empower and simplify common operations.
+#' Higher order functions and function wrappers to empower and simplify common operations.
 #'
-#'Hordr adds features, generalizes, and fills in gaps in standards R operations to add power and flexibility.  
-#' @docType package
+#' Hordr adds features, generalizes, and fills in gaps in standards R operations to add power and flexibility.  
 #' @name hordr
-#' 
- 
+#' @docType package
+NULL
 
-# vectorize<-function()
-# {
-#   function(fun)
-#   {
-#     function(...)
-#     {
-#       cols<-cbind(...)
-#       if(ncol(cols)<=1)
-#         fun(cols[,1])
-#       else
-#         apply(cols,1,function (x) fun(unlist(x)))
-#     }
-#   }
-# }
-
-#'Robust alternative to \code{\link{Vectorize}} function that accepts function with two or more arguments.  
+#' Robust alternative to Vectorize function that accepts function with two or more arguments.  
 #'
-#' Returns a function that will work an arbitrary number of data vectors, though output may be unpredicatable in unusual applications The results are also intended to be more intuitive than \code{\link{Vectorize}}. 
+#' Returns a function that will work an arbitrary number of vectors, lists or data frames, though output may be unpredicatable in unusual applications The results are also intended to be more intuitive than \code{\link{Vectorize}}. 
 #'
-#'@param fun a two or more argument function that returns an atomic value
-#'@param type 1 forces a row-wise evaluation, even on atomic vectors
-#'@export
-#'@examples
-#'vectorize(`+`,c(1,2,3))
-#'vectorize(`+`,c(1,2,3),c(1,2,3))
+#' @param fun a two or more argument function
+#' @param type 1 forces a row-wise evaluation, even on atomic vectors
+#' @export
+#' @examples
+#' vectorize(`+`)(c(1,2,3))
+#' vectorize(sum)(c(1,2,3),c(1,2,3))
+#' # Compare these results to Vectorize, which does not vectorize sum at all.
+#' Vectorize(sum)(c(1,2,3),c(1,2,3))
+#' # Any combination of vectors, lists, matrices, or data frames an be used (although cbind has some strange behavior in certain cases)
+#' vectorize(`+`)(c(1,2,3),list(1,2,3),cbind(c(1,2,3)))
 
 vectorize<-function(fun,type=0)
 {
@@ -48,7 +36,7 @@ vectorize<-function(fun,type=0)
 #'
 #'Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
 #'
-#'@param ... an arbitrary number of vectors
+#'@param ... an arbitrary number of data objects, including vectors, lists, data objects
 #'@param fun a two argument function that returns an atomic value
 #'@export
 #'@examples
@@ -78,6 +66,16 @@ count<-function(...)
 {
   args<-list(...)
   result<-sum(!is.na(unlist(args)))
+  return(result)
+}
+
+buffer<-function(...,size=0,fill=NA,align='left')
+{
+  input<-c(...)
+  if(align=='left')
+    result<-c(input,rep(fill,(max(0,size-len(input)))))
+  else
+    result<-c(rep(fill,(max(0,size-len(input)))),input)
   return(result)
 }
 
@@ -149,11 +147,15 @@ rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
   return(result)
 }
 
+#'Allows finding the 'length' without knowledge of dimensionality.
+
 len <- function(data)
 {
   result<-ifelse(is.null(dim(data)),length(data),nrow(data))
   return(result)
 }
+
+#'Allows row indexing without knownledge of dimensionality.
 
 rows <- function(data,rownums)
 {
@@ -197,67 +199,3 @@ pb<-function(fun)
     res 
   }
 }
-
-buffer<-function(...,size=0,fill=NA,align='left')
-{
-  input<-c(...)
-  if(align=='left')
-    result<-c(input,rep(fill,(max(0,size-len(input)))))
-  else
-    result<-c(rep(fill,(max(0,size-len(input)))),input)
-  return(result)
-}
-
-
-
-
-# pb<-function(FUN,...)
-# {
-#   data<-unlist(...)
-#   FUN=match.fun(FUN)
-#   function(fun)
-#   {
-#     env <- environment()
-#     pb_Total <- len(data)
-#     counter <- 0
-#     pb <- txtProgressBar(min = 0, max = pb_Total, style = 3)   
-#     
-#     # wrapper around FUN
-#     wrapper <- function(...){
-#       curVal <- get("counter", envir = env)
-#       assign("counter", curVal +1 ,envir=env)
-#       setTxtProgressBar(get("pb", envir=env), curVal +1)
-#       FUN(...)
-#     }
-#     ptm<-proc.time()
-#     res <- fun(f=wrapper,data)
-#     print(proc.time()-ptm)
-#     close(pb)
-#     res
-#   }
-# }
-
-# pb<-function()
-# {
-#   function(fun,...)
-#   {
-#     function(data)
-#     {
-#       env <- environment()
-#       pb_Total <- len(data)
-#       counter <- 0
-#       pb <- txtProgressBar(min = 0, max = pb_Total, style = 3)   
-#       wrapper <- function(...){
-#         curVal <- get("counter", envir = env)
-#         assign("counter", curVal +1 ,envir=env)
-#         setTxtProgressBar(get("pb", envir=env), curVal +1)
-#         FUN(data,...)
-#       }
-#     }
-#     ptm<-proc.time()
-#     res <- fun(f=wrapper,data)
-#     print(proc.time()-ptm)
-#     close(pb)
-#     res  
-#   }
-# }

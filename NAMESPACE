@@ -1,0 +1,3 @@
+export(coalesce)
+export(count)
+export(vectorize)
