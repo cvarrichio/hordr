@@ -32,17 +32,16 @@ vectorize<-function(fun,type=0)
   }  
 }
 
-#'A more versatile form of the T-SQL \code{COALESCE} function.  
+#' A more versatile form of the T-SQL \code{coalesce()} function.  
 #'
-#'Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
-#'
-#'@param ... an arbitrary number of data objects, including vectors, lists, data objects
-#'@param fun a two argument function that returns an atomic value
-#'@export
-#'@examples
-#'coalesce(c(NA,1,2))
-#'coalesce(c(NA,1,2),c(3,4,NA))
-
+#' Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
+#' 
+#' @param ... an arbitrary number of data objects, including vectors, lists, data objects
+#' @param fun a two argument function that returns an atomic value
+#' @export
+#' @examples
+#' coalesce(c(NA,1,2))
+#' coalesce(c(NA,1,2),c(3,4,NA))
 
 coalesce<-function(...,fun=(function (x,y) if(!is.na(x)) x else y))
 {
@@ -51,31 +50,23 @@ coalesce<-function(...,fun=(function (x,y) if(!is.na(x)) x else y))
     vectorize() (FUN)(...)
 }
 
-#'A more versatile form of the T-SQL \code{COALESCE} function.  
+#'A more versatile form of the T-SQL \code{count()} function.
 #'
-#'Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
+#'Implementation of T-SQL \code{count} and Excel \code{COUNTIF} functions.  Shows the total number of elements in any number of data objects altogether or that match a condition.
 #'
 #'@param ... an arbitrary number of vectors
-#'@param fun a two argument function that returns an atomic value
+#'@param condition a 1 argument condition
 #'@export
 #'@examples
-#'coalesce(c(NA,1,2))
-#'coalesce(c(NA,1,2),c(3,4,NA))
+#'count(c(NA,1,2))
+#'count(c(NA,1,2),is.na)
+#'count(c(NA,1,2),list('A',4),cbind(1,2,3))
+#'count(c(NA,1,2),list('A',4),cbind(1,2,3),condition=is.character)
 
-count<-function(...)
+count<-function(...,condition=(function (x) TRUE))
 {
-  args<-list(...)
-  result<-sum(!is.na(unlist(args)))
-  return(result)
-}
-
-buffer<-function(...,size=0,fill=NA,align='left')
-{
-  input<-c(...)
-  if(align=='left')
-    result<-c(input,rep(fill,(max(0,size-len(input)))))
-  else
-    result<-c(rep(fill,(max(0,size-len(input)))),input)
+  data<-c(...)
+  result<-sum(sapply(data, function (x) if(condition(x)) 1 else 0))
   return(result)
 }
 
@@ -198,4 +189,14 @@ pb<-function(fun)
     close(pb)
     res 
   }
+}
+
+buffer<-function(...,size=0,fill=NA,align='left')
+{
+  input<-c(...)
+  if(align=='left')
+    result<-c(input,rep(fill,(max(0,size-len(input)))))
+  else
+    result<-c(rep(fill,(max(0,size-len(input)))),input)
+  return(result)
 }

@@ -1,6 +1,6 @@
 \name{coalesce}
 \alias{coalesce}
-\title{A more versatile form of the T-SQL \code{COALESCE} function.}
+\title{A more versatile form of the T-SQL \code{coalesce()} function.}
 \usage{
   coalesce(...,
     fun = (function(x, y) if (!is.na(x)) x else y))

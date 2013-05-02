@@ -1,23 +1,24 @@
 \name{count}
 \alias{count}
-\title{A more versatile form of the T-SQL \code{COALESCE} function.}
+\title{A more versatile form of the T-SQL \code{count()} function.}
 \usage{
-  count(...)
+  count(..., condition = (function(x) TRUE))
 }
 \arguments{
   \item{...}{an arbitrary number of vectors}
 
-  \item{fun}{a two argument function that returns an atomic
-  value}
+  \item{condition}{a 1 argument condition}
 }
 \description{
-  Little more than a wrapper for \code{\link{vectorize}},
-  allows for duplication of SQL coalesce functionality,
-  certain types of if-else statements, and
-  \code{\link{apply}}/\code{\link{Reduce}} combinations.
+  Implementation of T-SQL \code{count} and Excel
+  \code{COUNTIF} functions.  Shows the total number of
+  elements in any number of data objects altogether or that
+  match a condition.
 }
 \examples{
-coalesce(c(NA,1,2))
-coalesce(c(NA,1,2),c(3,4,NA))
+count(c(NA,1,2))
+count(c(NA,1,2),is.na)
+count(c(NA,1,2),list('A',4),cbind(1,2,3))
+count(c(NA,1,2),list('A',4),cbind(1,2,3),condition=is.character)
 }
 
