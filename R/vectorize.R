@@ -5,7 +5,7 @@
 #' @docType package
 NULL
 
-#' Robust alternative to Vectorize function that accepts function with two or more arguments.  
+#' Robust alternative to Vectorize function that accepts any function with two or more arguments.  
 #'
 #' Returns a function that will work an arbitrary number of vectors, lists or data frames, though output may be unpredicatable in unusual applications The results are also intended to be more intuitive than \code{\link{Vectorize}}. 
 #'
@@ -36,7 +36,7 @@ vectorize<-function(fun,type=0)
 #'
 #' Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
 #' 
-#' @param ... an arbitrary number of data objects, including vectors, lists, data objects
+#' @param ... an arbitrary number of \code{R} objects
 #' @param fun a two argument function that returns an atomic value
 #' @export
 #' @examples
@@ -54,7 +54,7 @@ coalesce<-function(...,fun=(function (x,y) if(!is.na(x)) x else y))
 #'
 #'Implementation of T-SQL \code{count} and Excel \code{COUNTIF} functions.  Shows the total number of elements in any number of data objects altogether or that match a condition.
 #'
-#'@param ... an arbitrary number of vectors
+#'@param ... an arbitrary number of \code{R} objects
 #'@param condition a 1 argument condition
 #'@export
 #'@examples
@@ -85,83 +85,38 @@ alert<-function(condition)
   }
 }
 
+#'An alternative to \code{\link{system.time}} that prints the times to the screen while returning the result of the original operation.
+#'
+#'This process time utility can be wrapped around any normal function with no effect other than printing the process time to the screen.  This allows visual feedback on timing without otherwise interrupting the operation of the function.
+#'
+#'@param fun the function to evaluate
+#'@param ... all other arguments to be passed to fun
+#'@export
+#'@examples
+#'results<-time (vectorize(sum))(rep.int(x=5,times=1000000))
+#'results
+
 time<-function(fun)
+{
+  function(...)
   {
-    function(...)
-    {
-      ptm<-proc.time()
-      results<-fun(...)
-      print(proc.time()-ptm)
-      return(results)
-    }
+    ptm<-proc.time()
+    results<-fun(...)
+    print(proc.time()-ptm)
+    return(results)
   }
-
-
-Curry <- function(FUN,...) {
-  .orig = list(...);
-  function(...) do.call(FUN,c(.orig,list(...)))
 }
 
-Compose <- function(...) {
-  fs <- list(...)
-  function(...) Reduce(function(x, f) f(x),
-                       fs,
-                       ...)
-}
-
-#Funcall and iterate can be called by example(Reduce)
-
-Funcall <- function(f, ...) 
-{
-  f(...)
-}
-## Compute log(exp(acos(cos(0))
-#Reduce(Funcall, list(log, exp, acos, cos), 0, right = TRUE)
-#This is probably obsoleted by proper use of do.call:
-#Reduce(function (fun,x) do.call(fun,list(x)), list(log, exp, acos, cos), 5, right = TRUE)
-
-## n-fold iterate of a function, functional style:
-Iterate <- function(f, n = 1) function(x) Reduce(Funcall, rep.int(list(f), n), x, right = TRUE)
-#> Iterate (function (x) x^2,n=3)(2)
-#[1] 256
-
-
-rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
-{
-  if(minimum>len(data))
-    return()
-  FUN=match.fun(fun)
-  if (align=='left')
-    result<-sapply_pb(1:(len(data)-minimum+1),function (x) FUN(rows(data,x:(min(len(data),(x+window))))))
-  if (align=='right')
-    result<-sapply_pb(minimum:len(data),function (x) FUN(rows(data,max(1,x-window+1):x)))
-  return(result)
-}
-
-#'Allows finding the 'length' without knowledge of dimensionality.
-
-len <- function(data)
-{
-  result<-ifelse(is.null(dim(data)),length(data),nrow(data))
-  return(result)
-}
-
-#'Allows row indexing without knownledge of dimensionality.
-
-rows <- function(data,rownums)
-{
-  #result<-data[rownums]
-  if(is.null(dim(data)))
-  {
-    result<-data[rownums]
-  }
-  else
-  {
-    result<-data[rownums,]
-  }
-  #result<-ifelse(is.null(dim(data)),data[c(rownums)],data[c(rownums),])
-  return(result)
-}
+#'A wrapper that will at a progress bar to many higher order functions
+#'
+#'This process time utility can be wrapped around any normal function with no effect other than printing the process time to the screen.  This allows visual feedback on timing without otherwise interrupting the operation of the function.
+#'
+#'@param fun the function to evaluate
+#'@param ... all other arguments to be passed to fun
+#'@export
+#'@examples
+#'results<-pb(lapply)(sqrt,rep.int(x=5,times=1000000))
+#'results<-pb(Reduce)('+',sqrt(c(1:100000)))
 
 pb<-function(fun)
 {
@@ -191,6 +146,55 @@ pb<-function(fun)
   }
 }
 
+#'Applies a function to a rolling window along any data object.
+#'
+#'Similar but not identical to \code{\link{rollapply}} in package {\code\link{zoo}}, with the advantage that it works on any type of data structure (vector, list, matrix, etc) instead of requiring a \code{\link{zoo}} object.
+#'
+#'@param fun the function to evaluate
+#'@param ... all other arguments to be passed to fun
+#'@export
+#'@examples
+#'rollApply(1:100,sum,minimum=2,window=2)
+#'rollApply(1:100,sum,minimum=2,window=2,align='right')
+
+rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
+{
+  if(minimum>len(data))
+    return()
+  FUN=match.fun(fun)
+  if (align=='left')
+    result<-sapply(1:(len(data)-minimum+1),function (x) FUN(rows(data,x:(min(len(data),(x+window-1))))))
+  if (align=='right')
+    result<-sapply(minimum:len(data),function (x) FUN(rows(data,max(1,x-window+1):x)))
+  return(result)
+}
+
+#'Allows finding the 'length' without knowledge of dimensionality.
+#'@param data any \code{R} object
+#'
+len <- function(data)
+{
+  result<-ifelse(is.null(dim(data)),length(data),nrow(data))
+  return(result)
+}
+
+#'Allows row indexing without knownledge of dimensionality.
+
+rows <- function(data,rownums)
+{
+  #result<-data[rownums]
+  if(is.null(dim(data)))
+  {
+    result<-data[rownums]
+  }
+  else
+  {
+    result<-data[rownums,]
+  }
+  #result<-ifelse(is.null(dim(data)),data[c(rownums)],data[c(rownums),])
+  return(result)
+}
+
 buffer<-function(...,size=0,fill=NA,align='left')
 {
   input<-c(...)
@@ -200,3 +204,31 @@ buffer<-function(...,size=0,fill=NA,align='left')
     result<-c(rep(fill,(max(0,size-len(input)))),input)
   return(result)
 }
+
+Curry <- function(FUN,...) {
+  .orig = list(...);
+  function(...) do.call(FUN,c(.orig,list(...)))
+}
+
+Compose <- function(...) {
+  fs <- list(...)
+  function(...) Reduce(function(x, f) f(x),
+                       fs,
+                       ...)
+}
+
+#Funcall and iterate can be called by example(Reduce)
+
+Funcall <- function(f, ...) 
+{
+  f(...)
+}
+## Compute log(exp(acos(cos(0))
+#Reduce(Funcall, list(log, exp, acos, cos), 0, right = TRUE)
+#This is probably obsoleted by proper use of do.call:
+#Reduce(function (fun,x) do.call(fun,list(x)), list(log, exp, acos, cos), 5, right = TRUE)
+
+## n-fold iterate of a function, functional style:
+Iterate <- function(f, n = 1) function(x) Reduce(Funcall, rep.int(list(f), n), x, right = TRUE)
+#> Iterate (function (x) x^2,n=3)(2)
+#[1] 256
