@@ -17,20 +17,41 @@ NULL
 #' vectorize(sum)(c(1,2,3),c(1,2,3))
 #' # Compare these results to Vectorize, which does not vectorize sum at all.
 #' Vectorize(sum)(c(1,2,3),c(1,2,3))
-#' # Any combination of vectors, lists, matrices, or data frames an be used (although cbind has some strange behavior in certain cases)
+#' # Across data frame columns.
+#' df<-data.frame(a=c(1,2,3),b=c(1,2,3))
+#' vectorize(sum)(df$a,df$b)
+#' # Once again, Vectorize gives a different result
+#' Vectorize(sum)(df$a,df$b)
+#' # Any combination of vectors, lists, matrices, or data frames an be used.
 #' vectorize(`+`)(c(1,2,3),list(1,2,3),cbind(c(1,2,3)))
-
-vectorize<-function(fun,type=0)
+vectorize<-function(fun,type=1)
 {
   function(...)
   {
-    cols<-cbind(...)
-    if((ncol(cols)>1) | (type==1 & (nrow(cols) > 1)))
-      apply(cols,1,function (x) Reduce(fun,unlist(x)))
+    cols<-lapply(list(...),cbind)
+    cols<-Reduce(cbind,cols)
+    if(type==3)
+      type=c(1,2)
+    if(type!=4)
+      apply(cols,type,function (x) Reduce(fun,unlist(x)))
     else
-      Reduce(fun,cols[,1])
+      Reduce(fun,unlist(cols))
   }  
 }
+
+# vectorize<-function(fun,type=0)
+# {
+#   function(...)
+#   {
+#     cols<-cbind(...)
+#     if((ncol(cols)>1) | (type==1 & (nrow(cols) > 1)))
+#       apply(cols,1,function (x) Reduce(fun,unlist(x)))
+#     else
+#       Reduce(fun,cols[,1])
+#   }  
+# }
+
+
 
 #' A more versatile form of the T-SQL \code{coalesce()} function.  
 #'
@@ -42,12 +63,15 @@ vectorize<-function(fun,type=0)
 #' @examples
 #' coalesce(c(NA,1,2))
 #' coalesce(c(NA,1,2),c(3,4,NA))
-
+#' df<-data.frame(a=c(NA,2,3),b=c(1,2,NA))
+#' coalesce(df$a,df$b)
+#' # Or even just:
+#' coalesce(df)
 coalesce<-function(...,fun=(function (x,y) if(!is.na(x)) x else y))
 {
 
     FUN=match.fun(fun)
-    vectorize() (FUN)(...)
+    vectorize(FUN)(...)
 }
 
 #'A more versatile form of the T-SQL \code{count()} function.
@@ -62,7 +86,6 @@ coalesce<-function(...,fun=(function (x,y) if(!is.na(x)) x else y))
 #'count(c(NA,1,2),is.na)
 #'count(c(NA,1,2),list('A',4),cbind(1,2,3))
 #'count(c(NA,1,2),list('A',4),cbind(1,2,3),condition=is.character)
-
 count<-function(...,condition=(function (x) TRUE))
 {
   data<-c(...)
@@ -70,6 +93,19 @@ count<-function(...,condition=(function (x) TRUE))
   return(result)
 }
 
+#'Wraps a function to only display it's results when matching a specific condition.
+#'
+#'Implementation of T-SQL \code{count} and Excel \code{COUNTIF} functions.  Shows the total number of elements in any number of data objects altogether or that match a condition.
+#'
+#'@param condition 
+#'@param fun
+#'@param ...
+#'@export
+#'@examples
+#'count(c(NA,1,2))
+#'count(c(NA,1,2),is.na)
+#'count(c(NA,1,2),list('A',4),cbind(1,2,3))
+#'count(c(NA,1,2),list('A',4),cbind(1,2,3),condition=is.character)
 alert<-function(condition)
 {
   function(fun)
@@ -95,7 +131,6 @@ alert<-function(condition)
 #'@examples
 #'results<-time (vectorize(sum))(rep.int(x=5,times=1000000))
 #'results
-
 time<-function(fun)
 {
   function(...)
@@ -117,7 +152,6 @@ time<-function(fun)
 #'@examples
 #'results<-pb(lapply)(sqrt,rep.int(x=5,times=1000000))
 #'results<-pb(Reduce)('+',sqrt(c(1:100000)))
-
 pb<-function(fun)
 {
   function(f,data,...)
@@ -156,7 +190,6 @@ pb<-function(fun)
 #'@examples
 #'rollApply(1:100,sum,minimum=2,window=2)
 #'rollApply(1:100,sum,minimum=2,window=2,align='right')
-
 rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
 {
   if(minimum>len(data))
@@ -168,7 +201,6 @@ rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
     result<-sapply(minimum:len(data),function (x) FUN(rows(data,max(1,x-window+1):x)))
   return(result)
 }
-
 #'Allows finding the 'length' without knowledge of dimensionality.
 #'@param data any \code{R} object
 #'
@@ -179,7 +211,6 @@ len <- function(data)
 }
 
 #'Allows row indexing without knownledge of dimensionality.
-
 rows <- function(data,rownums)
 {
   #result<-data[rownums]

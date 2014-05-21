@@ -10,5 +10,3 @@ Depends:
 License: GPL
 Suggests:
     functional
-Collate:
-    'vectorize.R'
