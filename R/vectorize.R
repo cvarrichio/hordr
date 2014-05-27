@@ -5,10 +5,13 @@
 #' @docType package
 NULL
 
-#' Robust alternative to Vectorize function that accepts any function with two or more arguments.  
-#'
-#' Returns a function that will work an arbitrary number of vectors, lists or data frames, though output may be unpredicatable in unusual applications The results are also intended to be more intuitive than \code{\link{Vectorize}}. 
-#'
+#' Robust alternative to Vectorize function that accepts any function with two
+#' or more arguments.
+#' 
+#' Returns a function that will work an arbitrary number of vectors, lists or
+#' data frames, though output may be unpredicatable in unusual applications The
+#' results are also intended to be more intuitive than \code{\link{Vectorize}}.
+#' 
 #' @param fun a two or more argument function
 #' @param type 1 forces a row-wise evaluation, even on atomic vectors
 #' @export
@@ -28,8 +31,7 @@ vectorize<-function(fun,type=1)
 {
   function(...)
   {
-    cols<-lapply(list(...),cbind)
-    cols<-Reduce(cbind,cols)
+    cols<-cbind.fill(...)
     if(type==3)
       type=c(1,2)
     if(type!=4)
@@ -39,19 +41,95 @@ vectorize<-function(fun,type=1)
   }  
 }
 
-# vectorize<-function(fun,type=0)
+#' Robust alternative to \code{\link{cbind} that fills missing values and works
+#' on arbitrary data types.
+#' 
+#' Combines any number of R objects into a single matrix, with each input
+#' corresponding to the greater of 1 or ncol.  \code{cbind} has counterintuitive
+#' results when working with lists, cannot handle certain inputs of differing
+#' length, and does not allow the fill to be specified.
+#' 
+#' @param ... any number of R data objects
+#' @param fill 
+#' @export
+#' @examples
+#' cbind.fill(c(1,2,3),list(1,2,3),cbind(c(1,2,3)))
+#' cbind.fill(c(1,2,3),list(1,2,3),cbind(c('a','b')),'a',df)
+#' cbind.fill(c(1,2,3),list(1,2,3),cbind(c('a','b')),'a',df,fill=NA)
+cbind.fill<-function(...,fill=NULL)
+{
+  inputs<-list(...)
+  maxlength<-max(unlist(lapply(inputs,len)))
+  bufferedInputs<-lapply(inputs,buffer,length.out=maxlength,fill,restoreClass=FALSE)
+  return(Reduce(cbind,bufferedInputs))
+}
+
+#'Allows row indexing without knowledge of dimensionality.
+#'
+#'@export
+rows <- function(data,rownums)
+{
+  #result<-data[rownums]
+  if(is.null(dim(data)))
+  {
+    result<-data[rownums]
+  }
+  else
+  {
+    result<-data[rownums,]
+  }
+  #result<-ifelse(is.null(dim(data)),data[c(rownums)],data[c(rownums),])
+  return(result)
+}
+
+#'Allows finding the 'length' without knowledge of dimensionality.
+#'
+#'@param data any \code{R} object
+#'@export
+#'
+len <- function(data)
+{
+  result<-ifelse(is.null(nrow(data)),length(data),nrow(data))
+  return(result)
+}
+
+# buffer<-function(...,size=0,fill=NA,align='left')
 # {
-#   function(...)
-#   {
-#     cols<-cbind(...)
-#     if((ncol(cols)>1) | (type==1 & (nrow(cols) > 1)))
-#       apply(cols,1,function (x) Reduce(fun,unlist(x)))
-#     else
-#       Reduce(fun,cols[,1])
-#   }  
+#   input<-c(...)
+#   if(align=='left')
+#     result<-c(input,rep(fill,(max(0,size-len(input)))))
+#   else
+#     result<-c(rep(fill,(max(0,size-len(input)))),input)
+#   return(result)
 # }
 
-
+#'Pads an object to a desired length, either with replicates of itself or another repeated object.
+#'
+#'@param x an R object
+#'@param length.out the desired length of the final output
+#'@export
+#'@examples
+#'buffer(c(1,2,3),20)
+#'buffer(matrix(c(1,2,3,4),nrow=2),20)
+#'buffer(list(1,2,3),20)
+buffer<-function(x,length.out=len(x),fill=NULL,restoreClass=TRUE)
+{
+  xclass<-class(x)
+  input<-data.frame(cbind(x))
+  results<-sapply(input,rep_len,length.out=length.out)
+  if(length.out>len(x) && !is.null(fill))
+  {
+    results<-t(results)
+    results[(length(unlist(x))+1):length(unlist(results))]<-fill
+    results<-t(results)
+  }
+  if(restoreClass)
+    if(xclass=='data.frame')
+      results<-as.data.frame(results)
+  else
+    results<-as(results,xclass)
+  return(results)   
+}
 
 #' A more versatile form of the T-SQL \code{coalesce()} function.  
 #'
@@ -92,6 +170,7 @@ count<-function(...,condition=(function (x) TRUE))
   result<-sum(sapply(data, function (x) if(condition(x)) 1 else 0))
   return(result)
 }
+
 
 #'Wraps a function to only display it's results when matching a specific condition.
 #'
@@ -142,7 +221,7 @@ time<-function(fun)
   }
 }
 
-#'A wrapper that will at a progress bar to many higher order functions
+#'A wrapper that will add a progress bar to many higher order functions.
 #'
 #'This process time utility can be wrapped around any normal function with no effect other than printing the process time to the screen.  This allows visual feedback on timing without otherwise interrupting the operation of the function.
 #'
@@ -189,7 +268,7 @@ pb<-function(fun)
 #'@export
 #'@examples
 #'rollApply(1:100,sum,minimum=2,window=2)
-#'rollApply(1:100,sum,minimum=2,window=2,align='right')
+#'rollApply(1:100,mean,minimum=30,window=30,align='right')
 rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
 {
   if(minimum>len(data))
@@ -201,40 +280,9 @@ rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
     result<-sapply(minimum:len(data),function (x) FUN(rows(data,max(1,x-window+1):x)))
   return(result)
 }
-#'Allows finding the 'length' without knowledge of dimensionality.
-#'@param data any \code{R} object
-#'
-len <- function(data)
-{
-  result<-ifelse(is.null(dim(data)),length(data),nrow(data))
-  return(result)
-}
 
-#'Allows row indexing without knownledge of dimensionality.
-rows <- function(data,rownums)
-{
-  #result<-data[rownums]
-  if(is.null(dim(data)))
-  {
-    result<-data[rownums]
-  }
-  else
-  {
-    result<-data[rownums,]
-  }
-  #result<-ifelse(is.null(dim(data)),data[c(rownums)],data[c(rownums),])
-  return(result)
-}
 
-buffer<-function(...,size=0,fill=NA,align='left')
-{
-  input<-c(...)
-  if(align=='left')
-    result<-c(input,rep(fill,(max(0,size-len(input)))))
-  else
-    result<-c(rep(fill,(max(0,size-len(input)))),input)
-  return(result)
-}
+
 
 Curry <- function(FUN,...) {
   .orig = list(...);
