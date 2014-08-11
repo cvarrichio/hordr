@@ -5,172 +5,23 @@
 #' @docType package
 NULL
 
-#' Robust alternative to Vectorize function that accepts any function with two
-#' or more arguments.
-#' 
-#' Returns a function that will work an arbitrary number of vectors, lists or
-#' data frames, though output may be unpredicatable in unusual applications The
-#' results are also intended to be more intuitive than \code{\link{Vectorize}}.
-#' 
-#' @param fun a two or more argument function
-#' @param type 1 forces a row-wise evaluation, even on atomic vectors
-#' @export
-#' @examples
-#' vectorize(`+`)(c(1,2,3))
-#' vectorize(sum)(c(1,2,3),c(1,2,3))
-#' # Compare these results to Vectorize, which does not vectorize sum at all.
-#' Vectorize(sum)(c(1,2,3),c(1,2,3))
-#' # Across data frame columns.
-#' df<-data.frame(a=c(1,2,3),b=c(1,2,3))
-#' vectorize(sum)(df$a,df$b)
-#' # Once again, Vectorize gives a different result
-#' Vectorize(sum)(df$a,df$b)
-#' # Any combination of vectors, lists, matrices, or data frames an be used.
-#' vectorize(`+`)(c(1,2,3),list(1,2,3),cbind(c(1,2,3)))
-vectorize<-function(fun,type=1)
-{
-  function(...)
-  {
-    cols<-cbind.fill(...)
-    if(type==3)
-      type=c(1,2)
-    if(type!=4)
-      apply(cols,type,function (x) Reduce(fun,unlist(x)))
-    else
-      Reduce(fun,unlist(cols))
-  }  
-}
 
-#' Robust alternative to \code{\link{cbind} that fills missing values and works
-#' on arbitrary data types.
-#' 
-#' Combines any number of R objects into a single matrix, with each input
-#' corresponding to the greater of 1 or ncol.  \code{cbind} has counterintuitive
-#' results when working with lists, cannot handle certain inputs of differing
-#' length, and does not allow the fill to be specified.
-#' 
-#' @param ... any number of R data objects
-#' @param fill 
-#' @export
-#' @examples
-#' cbind.fill(c(1,2,3),list(1,2,3),cbind(c(1,2,3)))
-#' cbind.fill(c(1,2,3),list(1,2,3),cbind(c('a','b')),'a',df)
-#' cbind.fill(c(1,2,3),list(1,2,3),cbind(c('a','b')),'a',df,fill=NA)
-cbind.fill<-function(...,fill=NULL)
+rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
 {
-  inputs<-list(...)
-  maxlength<-max(unlist(lapply(inputs,len)))
-  bufferedInputs<-lapply(inputs,buffer,length.out=maxlength,fill,restoreClass=FALSE)
-  return(Reduce(cbind,bufferedInputs))
-}
-
-#'Allows row indexing without knowledge of dimensionality.
-#'
-#'@export
-rows <- function(data,rownums)
-{
-  #result<-data[rownums]
-  if(is.null(dim(data)))
-  {
-    result<-data[rownums]
-  }
-  else
-  {
-    result<-data[rownums,]
-  }
-  #result<-ifelse(is.null(dim(data)),data[c(rownums)],data[c(rownums),])
+  if(minimum>len(data))
+    return()
+  FUN=match.fun(fun)
+  if (align=='left')
+    result<-sapply(1:(len(data)-minimum+1),function (x) FUN(rows(data,x:(min(len(data),(x+window-1))))))
+  if (align=='right')
+    result<-sapply(minimum:len(data),function (x) FUN(rows(data,max(1,x-window+1):x)))
   return(result)
 }
 
-#'Allows finding the 'length' without knowledge of dimensionality.
-#'
-#'@param data any \code{R} object
-#'@export
-#'
-len <- function(data)
+rowApply<-function(data,fun)
 {
-  result<-ifelse(is.null(nrow(data)),length(data),nrow(data))
-  return(result)
+  vapply(1:len(data),function (x) fun(rows(data,x)))
 }
-
-# buffer<-function(...,size=0,fill=NA,align='left')
-# {
-#   input<-c(...)
-#   if(align=='left')
-#     result<-c(input,rep(fill,(max(0,size-len(input)))))
-#   else
-#     result<-c(rep(fill,(max(0,size-len(input)))),input)
-#   return(result)
-# }
-
-#'Pads an object to a desired length, either with replicates of itself or another repeated object.
-#'
-#'@param x an R object
-#'@param length.out the desired length of the final output
-#'@export
-#'@examples
-#'buffer(c(1,2,3),20)
-#'buffer(matrix(c(1,2,3,4),nrow=2),20)
-#'buffer(list(1,2,3),20)
-buffer<-function(x,length.out=len(x),fill=NULL,restoreClass=TRUE)
-{
-  xclass<-class(x)
-  input<-data.frame(cbind(x))
-  results<-sapply(input,rep_len,length.out=length.out)
-  if(length.out>len(x) && !is.null(fill))
-  {
-    results<-t(results)
-    results[(length(unlist(x))+1):length(unlist(results))]<-fill
-    results<-t(results)
-  }
-  if(restoreClass)
-    if(xclass=='data.frame')
-      results<-as.data.frame(results)
-  else
-    results<-as(results,xclass)
-  return(results)   
-}
-
-#' A more versatile form of the T-SQL \code{coalesce()} function.  
-#'
-#' Little more than a wrapper for \code{\link{vectorize}}, allows for duplication of SQL coalesce functionality, certain types of if-else statements, and \code{\link{apply}}/\code{\link{Reduce}} combinations.
-#' 
-#' @param ... an arbitrary number of \code{R} objects
-#' @param fun a two argument function that returns an atomic value
-#' @export
-#' @examples
-#' coalesce(c(NA,1,2))
-#' coalesce(c(NA,1,2),c(3,4,NA))
-#' df<-data.frame(a=c(NA,2,3),b=c(1,2,NA))
-#' coalesce(df$a,df$b)
-#' # Or even just:
-#' coalesce(df)
-coalesce<-function(...,fun=(function (x,y) if(!is.na(x)) x else y))
-{
-
-    FUN=match.fun(fun)
-    vectorize(FUN)(...)
-}
-
-#'A more versatile form of the T-SQL \code{count()} function.
-#'
-#'Implementation of T-SQL \code{count} and Excel \code{COUNTIF} functions.  Shows the total number of elements in any number of data objects altogether or that match a condition.
-#'
-#'@param ... an arbitrary number of \code{R} objects
-#'@param condition a 1 argument condition
-#'@export
-#'@examples
-#'count(c(NA,1,2))
-#'count(c(NA,1,2),is.na)
-#'count(c(NA,1,2),list('A',4),cbind(1,2,3))
-#'count(c(NA,1,2),list('A',4),cbind(1,2,3),condition=is.character)
-count<-function(...,condition=(function (x) TRUE))
-{
-  data<-c(...)
-  result<-sum(sapply(data, function (x) if(condition(x)) 1 else 0))
-  return(result)
-}
-
 
 #'Wraps a function to only display it's results when matching a specific condition.
 #'
@@ -229,7 +80,7 @@ time<-function(fun)
 #'@param ... all other arguments to be passed to fun
 #'@export
 #'@examples
-#'results<-pb(lapply)(sqrt,rep.int(x=5,times=1000000))
+#'results<-pb(lapply)(sqrt,rep.int(x=5,times=100000))
 #'results<-pb(Reduce)('+',sqrt(c(1:100000)))
 pb<-function(fun)
 {
@@ -259,28 +110,13 @@ pb<-function(fun)
   }
 }
 
-#'Applies a function to a rolling window along any data object.
-#'
-#'Similar but not identical to \code{\link{rollapply}} in package {\code\link{zoo}}, with the advantage that it works on any type of data structure (vector, list, matrix, etc) instead of requiring a \code{\link{zoo}} object.
-#'
-#'@param fun the function to evaluate
-#'@param ... all other arguments to be passed to fun
-#'@export
-#'@examples
-#'rollApply(1:100,sum,minimum=2,window=2)
-#'rollApply(1:100,mean,minimum=30,window=30,align='right')
-rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
+echo<-function(string)
 {
-  if(minimum>len(data))
-    return()
-  FUN=match.fun(fun)
-  if (align=='left')
-    result<-sapply(1:(len(data)-minimum+1),function (x) FUN(rows(data,x:(min(len(data),(x+window-1))))))
-  if (align=='right')
-    result<-sapply(minimum:len(data),function (x) FUN(rows(data,max(1,x-window+1):x)))
-  return(result)
+  function(f)
+  {
+    
+  }
 }
-
 
 
 
