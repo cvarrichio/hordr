@@ -5,24 +5,6 @@
 #' @docType package
 NULL
 
-
-rollApply <- function(data,fun,window=len(data),minimum=1,align='left')
-{
-  if(minimum>len(data))
-    return()
-  FUN=match.fun(fun)
-  if (align=='left')
-    result<-sapply(1:(len(data)-minimum+1),function (x) FUN(rows(data,x:(min(len(data),(x+window-1))))))
-  if (align=='right')
-    result<-sapply(minimum:len(data),function (x) FUN(rows(data,max(1,x-window+1):x)))
-  return(result)
-}
-
-rowApply<-function(data,fun)
-{
-  vapply(1:len(data),function (x) fun(rows(data,x)))
-}
-
 #'Wraps a function to only display it's results when matching a specific condition.
 #'
 #'Implementation of T-SQL \code{count} and Excel \code{COUNTIF} functions.  Shows the total number of elements in any number of data objects altogether or that match a condition.
@@ -110,7 +92,7 @@ pb<-function(fun)
   }
 }
 
-echo<-function(string)
+echo<-function(string, condition=function (x) TRUE)
 {
   function(f)
   {
@@ -118,6 +100,13 @@ echo<-function(string)
   }
 }
 
+sample<-function(sample,seed)
+{
+  function(f)
+  {
+    
+  }
+}
 
 
 Curry <- function(FUN,...) {
